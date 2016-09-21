@@ -1,5 +1,4 @@
-var lib = process.env.POMELO_COV ? 'lib-cov' : 'lib';
-var CountDownLatch = require('../../' + lib + '/util/countDownLatch');
+var CountDownLatch = require('../../lib/util/countDownLatch');
 var should = require('should');
 
 var cbCreator = (function() {
@@ -62,5 +61,17 @@ describe('countdown latch test', function() {
         cdl.done();
       }).should.throw();
     });
+
+    it('should invoke the callback if timeout', function() {
+      var n = 3;
+      var cdl = CountDownLatch.createCountDownLatch(n, {timeout: 3000}, function(isTimeout) {
+        isTimeout.should.equal(true);
+      });
+
+      for(var i=0; i<n-1; i++) {
+        cdl.done();
+      }
+    });
+
   });
 });

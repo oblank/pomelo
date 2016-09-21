@@ -1,15 +1,15 @@
-var lib = process.env.POMELO_COV ? 'lib-cov' : 'lib';
 var should = require('should');
 var pomelo = require('../../');
-var ChannelService = require('../../' + lib + '/common/service/channelService');
+var ChannelService = require('../../lib/common/service/channelService');
 
 var mockBase = process.cwd() + '/test';
 var channelName = 'test_channel';
+var mockApp = {serverId: 'test-server-1'};
 
 describe('channel test', function() {
   describe('#add', function() {
     it('should add a member into channel and could fetch it later', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 
@@ -23,7 +23,7 @@ describe('channel test', function() {
     });
 
     it('should fail if the sid not specified', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 
@@ -32,7 +32,7 @@ describe('channel test', function() {
     });
 
     it('should fail after the channel has been destroied', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 
@@ -45,7 +45,7 @@ describe('channel test', function() {
 
   describe('#leave', function() {
     it('should remove the member from channel when leave', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 
@@ -61,7 +61,7 @@ describe('channel test', function() {
     });
 
     it('should fail if uid or sid not specified', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 
@@ -81,7 +81,7 @@ describe('channel test', function() {
         {uid: 'uid3', sid: 'sid3'}
       ];
 
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
 
       var i, l, item;
@@ -145,7 +145,7 @@ describe('channel test', function() {
       });
     });
     it('should fail if channel has destroied', function() {
-      var channelService = new ChannelService();
+      var channelService = new ChannelService(mockApp);
       var channel = channelService.createChannel(channelName);
       should.exist(channel);
 

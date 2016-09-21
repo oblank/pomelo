@@ -1,7 +1,6 @@
-var lib = process.env.POMELO_COV ? 'lib-cov' : 'lib';
 var should = require('should');
 var pomelo = require('../../');
-var SessionService = require('../../' + lib + '/common/service/sessionService');
+var SessionService = require('../../lib/common/service/sessionService');
 
 describe('session service test', function() {
   describe('#bind', function() {
@@ -190,9 +189,11 @@ describe('session service test', function() {
   });
 
   describe('#kick', function() {
-    it('should kick the session', function(done) {
+    it('should kick the sessions', function(done) {
       var service = new SessionService();
-      var sid = 1, fid = 'frontend-server-1';
+      var sid1 = 1, fid1 = 'frontend-server-1';
+      var sid2 = 2, fid2 = 'frontend-server-1';
+
       var socket = {
         emit: function(){},
         disconnect: function(){}
@@ -200,18 +201,62 @@ describe('session service test', function() {
       var uid = 'changchang';
       var eventCount = 0;
 
-      var session = service.create(sid, fid, socket);
-      session.on('closed', function() {
+      var session1 = service.create(sid1, fid1, socket);
+      var session2 = service.create(sid2, fid2, socket);
+      session1.on('closed', function() {
         eventCount++;
       });
 
-      service.bind(sid, uid, function(err) {
-        service.kick(uid, function(err) {
-          should.not.exist(err);
-          should.not.exist(service.get(sid));
-          should.not.exist(service.getByUid(uid));
-          eventCount.should.equal(1);
-          done();
+      session2.on('closed', function() {
+        eventCount++;
+      });
+
+      service.bind(sid1, uid, function(err) {
+        service.bind(sid2, uid, function(err) {
+          service.kick(uid, function(err) {
+            should.not.exist(err);
+            should.not.exist(service.get(sid1));
+            should.not.exist(service.get(sid2));
+            should.not.exist(service.getByUid(uid));
+            eventCount.should.equal(2);
+            done();
+          });
+        });
+      });
+    });
+
+    it('should kick the session by sessionId', function(done) {
+      var service = new SessionService();
+      var sid1 = 1, fid1 = 'frontend-server-1';
+      var sid2 = 2, fid2 = 'frontend-server-1';
+
+      var socket = {
+        emit: function(){},
+        disconnect: function(){}
+      };
+      var uid = 'changchang';
+      var eventCount = 0;
+
+      var session1 = service.create(sid1, fid1, socket);
+      var session2 = service.create(sid2, fid2, socket);
+      session1.on('closed', function() {
+        eventCount++;
+      });
+
+      session2.on('closed', function() {
+        eventCount++;
+      });
+
+      service.bind(sid1, uid, function(err) {
+        service.bind(sid2, uid, function(err) {
+          service.kickBySessionId(sid1, function(err) {
+            should.not.exist(err);
+            should.not.exist(service.get(sid1));
+            should.exist(service.get(sid2));
+            should.exist(service.getByUid(uid));
+            eventCount.should.equal(1);
+            done();
+          });
         });
       });
     });
@@ -294,7 +339,7 @@ describe('session service test', function() {
   });
 });
 
-describe('mock local session test', function() {
+describe('frontend session test', function() {
   describe('#bind', function() {
     it('should get session by uid after binded', function(done) {
       var service = new SessionService();
@@ -303,16 +348,16 @@ describe('mock local session test', function() {
       var eventCount = 0;
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
+      var fsession = session.toFrontendSession();
 
-      should.exist(msession);
+      should.exist(fsession);
 
-      msession.on('bind', function(euid) {
+      fsession.on('bind', function(euid) {
         eventCount++;
         uid.should.equal(euid);
       });
 
-      msession.bind(uid, function(err) {
+      fsession.bind(uid, function(err) {
         should.not.exist(err);
         var sessions = service.getByUid(uid);
         should.exist(sessions);
@@ -331,10 +376,10 @@ describe('mock local session test', function() {
       var uid = 'py';
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
+      var fsession = session.toFrontendSession();
 
-      msession.bind(uid, null);
-      msession.unbind(uid, function(err) {
+      fsession.bind(uid, null);
+      fsession.unbind(uid, function(err) {
         should.not.exist(err);
         var sessions = service.getByUid(uid);
         should.not.exist(sessions);
@@ -344,19 +389,19 @@ describe('mock local session test', function() {
   });
 
   describe('#set/get', function() {
-    it('should update the key/value pair in mock local session but not session',
+    it('should update the key/value pair in frontend session but not session',
         function() {
       var service = new SessionService();
       var sid = 1, fid = 'frontend-server-1', socket = {};
       var key = 'key-1', value = 'value-1';
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
+      var fsession = session.toFrontendSession();
 
-      msession.set(key, value);
+      fsession.set(key, value);
 
       should.not.exist(session.get(key));
-      value.should.eql(msession.get(key));
+      value.should.eql(fsession.get(key));
     });
   });
 
@@ -367,12 +412,12 @@ describe('mock local session test', function() {
       var key = 'key-1', value = 'value-1', key2 = 'key-2', value2 = {};
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
+      var fsession = session.toFrontendSession();
 
-      msession.set(key, value);
-      msession.set(key2, value2);
+      fsession.set(key, value);
+      fsession.set(key2, value2);
 
-      msession.push(key, function(err) {
+      fsession.push(key, function(err) {
         should.not.exist(err);
         value.should.eql(session.get(key));
         should.not.exist(session.get(key2));
@@ -386,12 +431,12 @@ describe('mock local session test', function() {
       var key = 'key-1', value = 'value-1', key2 = 'key-2', value2 = {};
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
+      var fsession = session.toFrontendSession();
 
-      msession.set(key, value);
-      msession.set(key2, value2);
+      fsession.set(key, value);
+      fsession.set(key2, value2);
 
-      msession.pushAll(function(err) {
+      fsession.pushAll(function(err) {
         should.not.exist(err);
         value.should.eql(session.get(key));
         value2.should.eql(session.get(key2));
@@ -401,16 +446,16 @@ describe('mock local session test', function() {
   });
   
   describe('#export', function() {
-    it('should equal mockLocalSession after export', function(done) {
+    it('should equal frontend session after export', function(done) {
       var service = new SessionService();
       var sid = 1, fid = 'frontend-server-1', socket = {};
       var uid = 'py';
 
       var session = service.create(sid, fid, socket);
-      var msession = session.mockLocalSession();
-      var esession = msession.export();
-      esession.id.should.eql(msession.id);
-      esession.frontendId.should.eql(msession.frontendId);
+      var fsession = session.toFrontendSession();
+      var esession = fsession.export();
+      esession.id.should.eql(fsession.id);
+      esession.frontendId.should.eql(fsession.frontendId);
       done();
     });
   });
